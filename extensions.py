@@ -1,44 +1,44 @@
-импорт json# импортируем модуль для работы с JSON  
-импорт Запросы# импортируем модуль для работы с HTTP-запросами  
+import json  # импортируем модуль для работы с JSON
+import requests  # импортируем модуль для работы с HTTP-запросами
 from config import keys  # импортируем из файла config.py словарь с кодами валют
 
 
-APIException class(Exception): # создаем класс для обработки ошибок
-    пройти
+class APIException(Exception):  # создаем класс для обработки ошибок
+    pass
 
 
-CriptoConverter class: # создаем класс для конвертации криптовалют
+class CriptoConverter:  # создаем класс для конвертации криптовалют
     @staticmethod  # создаем статический метод для получения курса валют
-    def получи_цену(Цитата: ул., База: ул., сумма: ул.):
-        base == quote if: # проверяем, не выбраны ли одинаковые валюты
-            APIException raise(f'Нельзя конвертировать одинаковую валюту {base}.')
-        попробуйте:
-            keys = quote_ticker[quote] # получаем код валюты из словаря
-        Ключевая ошибка кроме:
-            Исключение из APIException поднять(
+    def get_price(quote: str, base: str, amount: str):
+        if quote == base:  # проверяем, не выбраны ли одинаковые валюты
+            raise APIException(f'Нельзя конвертировать одинаковую валюту {base}.')
+        try:
+            quote_ticker = keys[quote]  # получаем код валюты из словаря
+        except KeyError:
+            raise APIException(
                 f'Не удалось обработать валюту {quote}. Доступны следующие валюты: {", ".join(keys.keys())}')
-        попробуйте:
-            ключи = base_ticker[база]
-        Ключевая ошибка кроме:
-            Исключение из APIException поднять(
+        try:
+            base_ticker = keys[base]
+        except KeyError:
+            raise APIException(
                 f'Не удалось обработать валюту {base}. Доступны следующие валюты: {", ".join(keys.keys())}')
-        попробуйте:
-            float = amount(amount) # преобразуем количество валюты в число
-        Ошибка значения кроме:
-            APIException raise(f'Не удалось обработать количество {amount}! Количество должно быть числом.')
+        try:
+            amount = float(amount)  # преобразуем количество валюты в число
+        except ValueError:
+            raise APIException(f'Не удалось обработать количество {amount}! Количество должно быть числом.')
 
-        попробуйте:
-            requests = response.get( # делаем GET-запрос на сервер
-                f'https://min-api.cryptocompare.com/data/price?fsym ={quote_ticker}&tsyms={base_ticker}', тайм-аут=15)
-            print(response.status_code) # парсим код статуса ответа от сервера в консоль
-            response if.status_code != 200: # проверяем, что ответ от сервера не содержит ошибок
-                Возникает исключение(
+        try:
+            response = requests.get(  # делаем GET-запрос на сервер
+                f'https://min-api.cryptocompare.com/data/price?fsym={quote_ticker}&tsyms={base_ticker}', timeout=15)
+            print(response.status_code)  # парсим код статуса ответа от сервера в консоль
+            if response.status_code != 200:  # проверяем, что ответ от сервера не содержит ошибок
+                raise Exception(
                     f'Ошибка при запросе к серверу. Код ошибки: {response.status_code}. \nПожалуйста, попробуйте позже')
-            попробуйте:
-                общая база = json.загружает(ответ.Содержание)[ключи[База]] # получаем значение курса валют из JSON-ответа
-            кроме (json.Ошибка JSONDecodeError, Ошибка значения): # обрабатываем ошибки при обработке JSON-ответа
-                Exception raise(f'Не удалось обработать ответ от сервера.')
-        запросы кроме.исключений.ReadTimeout: # обрабатываем ошибку превышения времени ожидания ответа от сервера
-            Exception raise('Ошибка: превышено время ожидания ответа от сервера. Повторяем запрос...')
-            CriptoConverter return.get_price(quote, base, amount) # повторяем запрос
-        round * total_base return(amount, 2) # возвращаем конвертированную валюту
+            try:
+                total_base = json.loads(response.content)[keys[base]]  # получаем значение курса валют из JSON-ответа
+            except (json.JSONDecodeError, ValueError):  # обрабатываем ошибки при обработке JSON-ответа
+                raise Exception(f'Не удалось обработать ответ от сервера.')
+        except requests.exceptions.ReadTimeout:  # обрабатываем ошибку превышения времени ожидания ответа от сервера
+            raise Exception('Ошибка: превышено время ожидания ответа от сервера. Повторяем запрос...')
+            return CriptoConverter.get_price(quote, base, amount)  # повторяем запрос
+        return total_base * round(amount, 2)  # возвращаем конвертированную валюту
